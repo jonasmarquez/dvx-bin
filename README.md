@@ -18,6 +18,21 @@ The source code and detailed docs live in the main `dvx` repository.
 
 ---
 
+## Requirements
+
+- macOS or Linux (x86_64 or arm64).
+- A POSIX-compatible shell (bash, zsh, etc.).
+- For Kubernetes-related commands (`dvx k8s …`):
+  - `kubectl` installed and available in your `PATH`.
+  - A working kubeconfig for the clusters you want to use with dvx.
+- For Homebrew installation: Homebrew installed on your system.
+- An editor configured in `$DVX_EDITOR` or `$EDITOR` (vim, nvim, code, etc.) for `dvx dim edit` (optional but recommended).
+
+> 🔎 If `kubectl` is not present, dvx will still work for dimensions, env and secrets,
+> but `dvx k8s *` commands will fail with a clear error message.
+
+---
+
 ## Features at a glance
 
 - 📁 **Dimensions**
@@ -68,11 +83,31 @@ The source code and detailed docs live in the main `dvx` repository.
     dvx k8s ns <name>        # set a namespace non-interactively
     dvx k8s shell            # open a subshell with the dimension's env
     dvx k8s pick             # interactive picker of K8s-enabled dimensions
+
+    dvx k8s inspect          # dashboard-like view of resources for the current namespace
+    dvx k8s count            # numeric summary of resources in the current namespace
     ```
 
   - `dvx k8s env` & `dvx k8s ns` work on the dvx runtime kubeconfig, so you can
     safely experiment with namespaces/contexts without touching your original
     kubeconfig.
+  - `dvx k8s inspect` and `dvx k8s count` respect the effective namespace in this order:
+    1. Explicit argument (`dvx k8s inspect <ns>`, `dvx k8s count <ns>`)
+    2. Namespace set on the dvx runtime kubeconfig (e.g. via `dvx k8s ns`)
+    3. `KUBE_NAMESPACE` from the shell environment
+    4. `kubernetes.namespace` from `dimensions.yaml`
+    5. `default`
+  - The Kubernetes UI layer:
+    - Shared **ASCII section boxes** for `inspect`/`count` with context & namespace:
+      ```text
+      ┌─ ☸ Pods ─────────────────────────────────────────────
+      │   ctx: dc1-dev-platform   ns: platform
+      └──────────────────────────────────────────────────────
+      ```
+    - Internal color handling for table headers and statuses:
+      - Pod phases (Running, Pending, Failed, Succeeded/Completed, Unknown).
+      - Job statuses (Failed, Complete/Completed/Succeeded) and their completions (e.g. `0/1`, `1/1`).
+    - Colors are applied directly by dvx, so no external tools like `kubecolor` are required.
 
 - 🎛️ **TTY-aware UX**
   - When running in a real terminal, dvx uses an interactive picker
@@ -82,6 +117,9 @@ The source code and detailed docs live in the main `dvx` repository.
     - Namespace selection (`dvx k8s ns` without args)
     - Secrets listing and actions (`dvx secrets list`, `dvx secrets gen`)
   - When used in scripts / CI (no TTY), dvx falls back to classic, non-interactive output.
+  - You can disable colors by setting either:
+    - `NO_COLOR` (standard convention), or
+    - `DVX_NO_COLOR=1` (dvx-specific override).
 
 ---
 
@@ -112,24 +150,24 @@ dvx version
 You should see something like:
 
 ```text
-dvx ⚙️  version 0.13.0
+dvx ⚙️  version 0.15.0
 ```
 
 ### 2. Manual download
 
 Go to the **Releases** page and download the appropriate tarball:
 
-- `dvx_<version>_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
-- `dvx_<version>_darwin_amd64.tar.gz`   – macOS Intel
-- `dvx_<version>_linux_amd64.tar.gz`    – Linux x86_64
-- `dvx_<version>_linux_arm64.tar.gz`    – Linux ARM64
+- `dvx_0.15.0_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
+- `dvx_0.15.0_darwin_amd64.tar.gz`   – macOS Intel
+- `dvx_0.15.0_linux_amd64.tar.gz`    – Linux x86_64
+- `dvx_0.15.0_linux_arm64.tar.gz`    – Linux ARM64
 
 Example (macOS arm64):
 
 ```bash
-curl -L -o dvx_0.13.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.13.0/dvx_0.13.0_darwin_arm64.tar.gz
+curl -L -o dvx_0.15.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.15.0/dvx_0.15.0_darwin_arm64.tar.gz
 
-tar xzf dvx_0.13.0_darwin_arm64.tar.gz
+tar xzf dvx_0.15.0_darwin_arm64.tar.gz
 chmod +x dvx
 sudo mv dvx /usr/local/bin/  # or any directory in your $PATH
 ```
@@ -364,6 +402,20 @@ dvx k8s ns kube-system
 eval "$(dvx k8s ns kube-system)"
 ```
 
+Inspect resources for the current namespace with a dashboard-like view:
+
+```bash
+dvx k8s inspect
+dvx k8s inspect kube-system
+```
+
+Get a numeric summary of resources for the current namespace:
+
+```bash
+dvx k8s count
+dvx k8s count kube-system
+```
+
 All these commands operate on the **runtime kubeconfig** managed by dvx,
 keeping your original kubeconfig untouched.
 
@@ -425,6 +477,12 @@ eval "$(dvx k8s env)"
 dvx k8s ns
 dvx k8s ns kube-system
 eval "$(dvx k8s ns kube-system)"
+
+dvx k8s inspect
+dvx k8s inspect kube-system
+
+dvx k8s count
+dvx k8s count kube-system
 
 dvx k8s shell
 dvx k8s pick
