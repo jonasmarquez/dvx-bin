@@ -10,10 +10,10 @@ logical contexts that group together:
 - Cloud accounts (AWS, Azure, GCP)
 - Encrypted secrets (with a local vault)
 
-Think of a **dimension** as your “current work universe”:  
+Think of a **dimension** as your “current work universe**”:
 `work @ dc1 / dev / on-prem / project X` — and you can switch between them quickly.
 
-This repository **only hosts prebuilt binaries and the Homebrew tap**.  
+This repository **only hosts prebuilt binaries and the Homebrew tap**.
 The source code and detailed docs live in the main `dvx` repository.
 
 ---
@@ -26,7 +26,8 @@ The source code and detailed docs live in the main `dvx` repository.
   - `kubectl` installed and available in your `PATH`.
   - A working kubeconfig for the clusters you want to use with dvx.
 - For Homebrew installation: Homebrew installed on your system.
-- An editor configured in `$DVX_EDITOR` or `$EDITOR` (vim, nvim, code, etc.) for `dvx dim edit` (optional but recommended).
+- An editor configured in `$DVX_EDITOR` or `$EDITOR` (vim, nvim, code, etc.) for
+  `dvx dim edit` and `dvx config` (optional but recommended).
 
 > 🔎 If `kubectl` is not present, dvx will still work for dimensions, env and secrets,
 > but `dvx k8s *` commands will fail with a clear error message.
@@ -199,6 +200,14 @@ k8s:
         - age
 ```
 
+You can open the global config in your editor with:
+
+```bash
+dvx config
+```
+
+If the file does not exist yet, dvx will create a starter `config.yaml` for you.
+
 ### Color precedence
 
 The effective color behavior is computed with this precedence:
@@ -242,7 +251,7 @@ dvx version
 You should see something like:
 
 ```text
-dvx ⚙️  version 0.16.0
+dvx ⚙️  version 0.16.1
 config:  /Users/you/.config/dvx/config.yaml (exists)
 colors:  enabled (source: defaults|config|env)
 env:     NO_COLOR=unset, DVX_NO_COLOR=unset
@@ -252,17 +261,17 @@ env:     NO_COLOR=unset, DVX_NO_COLOR=unset
 
 Go to the **Releases** page and download the appropriate tarball:
 
-- `dvx_0.16.0_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
-- `dvx_0.16.0_darwin_amd64.tar.gz`   – macOS Intel
-- `dvx_0.16.0_linux_amd64.tar.gz`    – Linux x86_64
-- `dvx_0.16.0_linux_arm64.tar.gz`    – Linux ARM64
+- `dvx_0.16.1_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
+- `dvx_0.16.1_darwin_amd64.tar.gz`   – macOS Intel
+- `dvx_0.16.1_linux_amd64.tar.gz`    – Linux x86_64
+- `dvx_0.16.1_linux_arm64.tar.gz`    – Linux ARM64
 
 Example (macOS arm64):
 
 ```bash
-curl -L -o dvx_0.16.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.16.0/dvx_0.16.0_darwin_arm64.tar.gz
+curl -L -o dvx_0.16.1_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.16.1/dvx_0.16.1_darwin_arm64.tar.gz
 
-tar xzf dvx_0.16.0_darwin_arm64.tar.gz
+tar xzf dvx_0.16.1_darwin_arm64.tar.gz
 chmod +x dvx
 sudo mv dvx /usr/local/bin/  # or any directory in your $PATH
 ```
@@ -287,9 +296,10 @@ This will:
 
 - Create the config directory (usually `~/.config/dvx`)
 - Create a starter `dimensions.yaml` if it doesn’t exist
+- Create a starter `config.yaml` if it doesn’t exist
 - Optionally initialize the secrets vault
 
-You can inspect the starter config:
+You can inspect the starter dimension config:
 
 ```bash
 cat ~/.config/dvx/dimensions.yaml
@@ -301,6 +311,20 @@ cat ~/.config/dvx/dimensions.yaml
 dvx dim edit
 # or edit the file directly:
 # $EDITOR ~/.config/dvx/dimensions.yaml
+```
+
+You can also inspect the global config (if present):
+
+```bash
+cat ~/.config/dvx/config.yaml
+```
+
+…and edit it via dvx:
+
+```bash
+dvx config
+# or edit the file directly:
+# $EDITOR ~/.config/dvx/config.yaml
 ```
 
 ### 2. Define your first dimension
@@ -391,7 +415,7 @@ dimension configuration.
 dvx secrets init
 ```
 
-You’ll be prompted for a **master password** (twice).  
+You’ll be prompted for a **master password** (twice).
 This creates `~/.config/dvx/secrets.enc.yaml`, encrypted with AES-GCM and a key
 derived from your password using `scrypt`.
 
@@ -555,7 +579,7 @@ Prints:
 Example:
 
 ```text
-dvx ⚙️  version 0.16.0
+dvx ⚙️  version 0.16.1
 config:  /home/user/.config/dvx/config.yaml (exists)
 colors:  enabled (source: config)
 env:     NO_COLOR=unset, DVX_NO_COLOR=unset
@@ -590,6 +614,9 @@ dvx debug
 
 # Initialize config + optional vault
 dvx init
+
+# Edit global config
+dvx config
 
 # Work with dimensions
 dvx dim ls
@@ -634,5 +661,5 @@ dvx k8s pick
 
 ## License
 
-`dvx` is distributed under the MIT license.  
+`dvx` is distributed under the MIT license.
 See the main repository for full source code and details.
