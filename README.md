@@ -109,7 +109,7 @@ The source code and detailed docs live in the main `dvx` repository.
       - Job statuses (Failed, Complete/Completed/Succeeded) and their completions (e.g. `0/1`, `1/1`).
     - Colors are applied directly by dvx, so no external tools like `kubecolor` are required.
 
-- 🎛️ **TTY-aware UX**
+- 🎛️ **TTY-aware UX & internal color system**
   - When running in a real terminal, dvx uses an interactive picker
     (via `promptui`) for:
     - Dimension selection (`dvx dim pick`)
@@ -117,9 +117,101 @@ The source code and detailed docs live in the main `dvx` repository.
     - Namespace selection (`dvx k8s ns` without args)
     - Secrets listing and actions (`dvx secrets list`, `dvx secrets gen`)
   - When used in scripts / CI (no TTY), dvx falls back to classic, non-interactive output.
-  - You can disable colors by setting either:
-    - `NO_COLOR` (standard convention), or
-    - `DVX_NO_COLOR=1` (dvx-specific override).
+  - Color handling is centralized:
+    - dvx uses its own ANSI color helpers for the Kubernetes dashboards and summaries.
+    - You can disable colors by setting:
+      - `NO_COLOR` (standard convention), or
+      - `DVX_NO_COLOR=1` (dvx-specific override).
+    - From **v0.16.0** onwards, colors can also be controlled from the global config file
+      via `ui.colors.enabled` (see below).
+
+- 🧩 **Global configuration & diagnostics (v0.16.0+)**
+  - Optional global config file at `~/.config/dvx/config.yaml` (YAML).
+  - Central place to configure dvx-wide behavior:
+    - `ui.colors.enabled` – turn dvx colors on/off from config.
+    - `ui.colors.theme` – placeholder for future color themes (currently informational).
+    - `k8s.inspect.sections`, `k8s.inspect.showEmptySections`, `k8s.inspect.columns` – defined as a stable base for future customization of `dvx k8s inspect` and `dvx k8s count`.
+  - New diagnostic command:
+    - `dvx debug` – prints a small diagnostic report:
+      - dvx version
+      - Config file path, existence and load status
+      - Effective color status (enabled/disabled) and its source (`env`, `config`, `defaults`)
+      - Current values of `NO_COLOR` and `DVX_NO_COLOR`
+      - Values of `ui.colors.enabled` / `ui.colors.theme` from config
+  - Enriched `dvx version` output (v0.16.0+):
+    - Shows whether the global config file exists
+    - Shows color status and its source
+    - Shows `NO_COLOR` and `DVX_NO_COLOR` values
+
+---
+
+## Global configuration (v0.16.0+)
+
+From v0.16.0 onwards, dvx supports an optional **global config file**:
+
+- Path: `~/.config/dvx/config.yaml`
+- Format: **YAML**
+
+Example:
+
+```yaml
+ui:
+  colors:
+    # If true, colors are enabled (unless NO_COLOR / DVX_NO_COLOR are set).
+    # If false, colors are disabled across the whole CLI.
+    # If omitted, dvx falls back to its built-in defaults (colors on),
+    # still honoring NO_COLOR / DVX_NO_COLOR.
+    enabled: true
+
+    # Placeholder for future themes.
+    # Currently informational; dvx does not yet apply different palettes.
+    theme: default
+
+k8s:
+  inspect:
+    # Sections dvx k8s inspect may show.
+    # These fields are currently “design only” and will be wired in
+    # future releases without breaking this schema.
+    sections:
+      - pods
+      - deployments
+      - statefulsets
+      - daemonsets
+      - services
+      - ingresses
+      - jobs
+      - cronjobs
+
+    showEmptySections: false
+
+    columns:
+      pods:
+        - name
+        - namespace
+        - status
+        - restarts
+        - age
+        - node
+      jobs:
+        - name
+        - completions
+        - active
+        - age
+```
+
+### Color precedence
+
+The effective color behavior is computed with this precedence:
+
+1. Environment variables:
+  - `DVX_NO_COLOR`
+  - `NO_COLOR`
+2. Global config:
+  - `ui.colors.enabled`
+3. Built-in defaults:
+  - Colors enabled.
+
+If `~/.config/dvx/config.yaml` does **not** exist, dvx behaves exactly as in v0.15.0 (colors on by default, still honoring `NO_COLOR` / `DVX_NO_COLOR`).
 
 ---
 
@@ -150,24 +242,27 @@ dvx version
 You should see something like:
 
 ```text
-dvx ⚙️  version 0.15.0
+dvx ⚙️  version 0.16.0
+config:  /Users/you/.config/dvx/config.yaml (exists)
+colors:  enabled (source: defaults|config|env)
+env:     NO_COLOR=unset, DVX_NO_COLOR=unset
 ```
 
 ### 2. Manual download
 
 Go to the **Releases** page and download the appropriate tarball:
 
-- `dvx_0.15.0_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
-- `dvx_0.15.0_darwin_amd64.tar.gz`   – macOS Intel
-- `dvx_0.15.0_linux_amd64.tar.gz`    – Linux x86_64
-- `dvx_0.15.0_linux_arm64.tar.gz`    – Linux ARM64
+- `dvx_0.16.0_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
+- `dvx_0.16.0_darwin_amd64.tar.gz`   – macOS Intel
+- `dvx_0.16.0_linux_amd64.tar.gz`    – Linux x86_64
+- `dvx_0.16.0_linux_arm64.tar.gz`    – Linux ARM64
 
 Example (macOS arm64):
 
 ```bash
-curl -L -o dvx_0.15.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.15.0/dvx_0.15.0_darwin_arm64.tar.gz
+curl -L -o dvx_0.16.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.16.0/dvx_0.16.0_darwin_arm64.tar.gz
 
-tar xzf dvx_0.15.0_darwin_arm64.tar.gz
+tar xzf dvx_0.16.0_darwin_arm64.tar.gz
 chmod +x dvx
 sudo mv dvx /usr/local/bin/  # or any directory in your $PATH
 ```
@@ -440,11 +535,58 @@ You are still responsible for:
 
 ---
 
+## Diagnostics
+
+From v0.16.0 onwards, dvx exposes a couple of diagnostic surfaces:
+
+### `dvx version`
+
+```bash
+dvx version
+```
+
+Prints:
+
+- The dvx version.
+- Whether the global config file exists or defaults are being used.
+- Color status (enabled/disabled) and its source (`env`, `config`, `defaults`).
+- The current values of `NO_COLOR` and `DVX_NO_COLOR`.
+
+Example:
+
+```text
+dvx ⚙️  version 0.16.0
+config:  /home/user/.config/dvx/config.yaml (exists)
+colors:  enabled (source: config)
+env:     NO_COLOR=unset, DVX_NO_COLOR=unset
+```
+
+### `dvx debug`
+
+```bash
+dvx debug
+```
+
+Prints a small diagnostic report with:
+
+- dvx version.
+- Config file path, existence and load status.
+- Effective color status and source.
+- Current values of `NO_COLOR` and `DVX_NO_COLOR`.
+- The values of `ui.colors.enabled` and `ui.colors.theme` as read from config.
+
+This is the first step towards a richer diagnostic mode in future releases.
+
+---
+
 ## Usage examples
 
 ```bash
-# Show version
+# Show version & config/color info
 dvx version
+
+# Small diagnostic report
+dvx debug
 
 # Initialize config + optional vault
 dvx init
