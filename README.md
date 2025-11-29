@@ -25,12 +25,18 @@ The source code and detailed docs live in the main `dvx` repository.
 - For Kubernetes-related commands (`dvx k8s …`):
   - `kubectl` installed and available in your `PATH`.
   - A working kubeconfig for the clusters you want to use with dvx.
+- For Terraform-related helpers (`dvx tf …`):
+  - `terraform` installed and available in your `PATH`.
+  - A valid `terraform.root_dir` defined in your dimensions (see main repo docs).
 - For Homebrew installation: Homebrew installed on your system.
 - An editor configured in `$DVX_EDITOR` or `$EDITOR` (vim, nvim, code, etc.) for
   `dvx dim edit` and `dvx config` (optional but recommended).
 
 > 🔎 If `kubectl` is not present, dvx will still work for dimensions, env and secrets,
 > but `dvx k8s *` commands will fail with a clear error message.
+>
+> 🔎 If `terraform` is not present, `dvx tf *` helpers (like `dvx tf backup`) will
+> fail with a clear error message, but the rest of dvx will continue to work normally.
 
 ---
 
@@ -110,6 +116,18 @@ The source code and detailed docs live in the main `dvx` repository.
       - Job statuses (Failed, Complete/Completed/Succeeded) and their completions (e.g. `0/1`, `1/1`).
     - Colors are applied directly by dvx, so no external tools like `kubecolor` are required.
 
+- 🧱 **Terraform helpers (v0.17.0+)**
+  - New `tf` command group for Terraform-related workflows.
+  - `dvx tf backup`:
+    - Creates a compressed backup (`.tar.gz`) of your Terraform project.
+    - Uses the dimension’s `terraform.root_dir` as the project root.
+    - Stores backups under a hidden directory inside the project root:
+      - Default layout: `.dvx-tf-backups/YYYYMMDD/`
+      - Filename: `YYYYMMDD-HHMMSS-<dimension>.tar.gz`
+    - Includes typical Terraform files: `*.tf`, `*.tfvars`, `terraform.tfstate`, `terraform.tfstate.backup`, `.terraform.lock.hcl`.
+    - Skips `.terraform/` by default (large and reproducible via `terraform init`).
+  - The detailed schema and configuration options (`tf.backup` section in `config.yaml`) are documented in the main dvx repository.
+
 - 🎛️ **TTY-aware UX & internal color system**
   - When running in a real terminal, dvx uses an interactive picker
     (via `promptui`) for:
@@ -132,6 +150,7 @@ The source code and detailed docs live in the main `dvx` repository.
     - `ui.colors.enabled` – turn dvx colors on/off from config.
     - `ui.colors.theme` – placeholder for future color themes (currently informational).
     - `k8s.inspect.sections`, `k8s.inspect.showEmptySections`, `k8s.inspect.columns` – defined as a stable base for future customization of `dvx k8s inspect` and `dvx k8s count`.
+    - `tf.backup.*` – defaults for Terraform backup directory, include/exclude patterns and safety flags (see main repo docs for details).
   - New diagnostic command:
     - `dvx debug` – prints a small diagnostic report:
       - dvx version
@@ -153,7 +172,7 @@ From v0.16.0 onwards, dvx supports an optional **global config file**:
 - Path: `~/.config/dvx/config.yaml`
 - Format: **YAML**
 
-Example:
+Example (excerpt):
 
 ```yaml
 ui:
@@ -198,6 +217,21 @@ k8s:
         - completions
         - active
         - age
+
+tf:
+  backup:
+    enabled: true
+    dir_name: ".dvx-tf-backups"
+    keep_last: 10
+    include_patterns:
+      - "*.tf"
+      - "*.tfvars"
+      - "terraform.tfstate"
+      - "terraform.tfstate.backup"
+      - ".terraform.lock.hcl"
+    exclude_patterns:
+      - ".terraform"
+    safe_mode: true
 ```
 
 You can open the global config in your editor with:
@@ -213,12 +247,12 @@ If the file does not exist yet, dvx will create a starter `config.yaml` for you.
 The effective color behavior is computed with this precedence:
 
 1. Environment variables:
-  - `DVX_NO_COLOR`
-  - `NO_COLOR`
+- `DVX_NO_COLOR`
+- `NO_COLOR`
 2. Global config:
-  - `ui.colors.enabled`
+- `ui.colors.enabled`
 3. Built-in defaults:
-  - Colors enabled.
+- Colors enabled.
 
 If `~/.config/dvx/config.yaml` does **not** exist, dvx behaves exactly as in v0.15.0 (colors on by default, still honoring `NO_COLOR` / `DVX_NO_COLOR`).
 
@@ -251,7 +285,7 @@ dvx version
 You should see something like:
 
 ```text
-dvx ⚙️  version 0.16.1
+dvx ⚙️  version 0.17.0
 config:  /Users/you/.config/dvx/config.yaml (exists)
 colors:  enabled (source: defaults|config|env)
 env:     NO_COLOR=unset, DVX_NO_COLOR=unset
@@ -261,17 +295,17 @@ env:     NO_COLOR=unset, DVX_NO_COLOR=unset
 
 Go to the **Releases** page and download the appropriate tarball:
 
-- `dvx_0.16.1_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
-- `dvx_0.16.1_darwin_amd64.tar.gz`   – macOS Intel
-- `dvx_0.16.1_linux_amd64.tar.gz`    – Linux x86_64
-- `dvx_0.16.1_linux_arm64.tar.gz`    – Linux ARM64
+- `dvx_0.17.0_darwin_arm64.tar.gz`   – macOS Apple Silicon (M1/M2/M3)
+- `dvx_0.17.0_darwin_amd64.tar.gz`   – macOS Intel
+- `dvx_0.17.0_linux_amd64.tar.gz`    – Linux x86_64
+- `dvx_0.17.0_linux_arm64.tar.gz`    – Linux ARM64
 
 Example (macOS arm64):
 
 ```bash
-curl -L -o dvx_0.16.1_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.16.1/dvx_0.16.1_darwin_arm64.tar.gz
+curl -L -o dvx_0.17.0_darwin_arm64.tar.gz   https://github.com/jonasmarquez/dvx-bin/releases/download/v0.17.0/dvx_0.17.0_darwin_arm64.tar.gz
 
-tar xzf dvx_0.16.1_darwin_arm64.tar.gz
+tar xzf dvx_0.17.0_darwin_arm64.tar.gz
 chmod +x dvx
 sudo mv dvx /usr/local/bin/  # or any directory in your $PATH
 ```
@@ -579,7 +613,7 @@ Prints:
 Example:
 
 ```text
-dvx ⚙️  version 0.16.1
+dvx ⚙️  version 0.17.0
 config:  /home/user/.config/dvx/config.yaml (exists)
 colors:  enabled (source: config)
 env:     NO_COLOR=unset, DVX_NO_COLOR=unset
